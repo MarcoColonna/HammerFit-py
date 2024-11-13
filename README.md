@@ -15,6 +15,9 @@ if you want to run the example (which is very basic right now) all you have to d
 Hammer 1.3 is required to use the BLPRXP parametrization in the example.
 
 You can than open the jupyter-notebook "B02DstTauNu_TauMu.ibynb" and try to execute the very basic code inside to:
+
     - read a config file and build a fitter object out of it
+
     - try to change the FFs and the WCs to see how the shape of the contributions change
+    
     - apply a nll scan using iminuit over the PS of the Scalar WC
