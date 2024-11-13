@@ -1,0 +1,25 @@
+Decay B0
+
+   1   D*-        tau+  nu_tau         PHOTOS  ISGW2;
+
+Enddecay
+CDecay anti-B0
+
+Decay D*-
+1.0       D0   pi-                   VSS;
+Enddecay
+CDecay D*+
+#
+Decay D0
+  1.00   K-  pi+                           PHOTOS PHSP;
+Enddecay
+CDecay anti-D0
+#
+Decay tau-
+  1.00      mu-  nu_tau  anti-nu_mu        PHOTOS TAULNUNU;
+Enddecay
+CDecay tau+
+
+#
+End
+
