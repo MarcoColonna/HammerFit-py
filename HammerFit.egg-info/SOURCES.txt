@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+./HammerFit/HammerFit.py
+./HammerFit/__init__.py
+HammerFit/HammerFit.py
+HammerFit/__init__.py
+HammerFit.egg-info/PKG-INFO
+HammerFit.egg-info/SOURCES.txt
+HammerFit.egg-info/dependency_links.txt
+HammerFit.egg-info/top_level.txt

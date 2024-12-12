@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: HammerFit
+Version: 0.0.1
+Summary: A Python module for HammerFit functionalities.
+Author-email: Your Name <your.email@example.com>
+License: MIT
+Project-URL: Homepage, https://example.com/HammerFit
+Project-URL: Repository, https://github.com/MarcoColonna/HammerFit-py/
+Keywords: fitness,hammerfit,module
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7

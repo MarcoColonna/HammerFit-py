@@ -7,6 +7,7 @@ from numpy import meshgrid, linspace, array
 from io import FileIO
 import matplotlib.pyplot as plt
 import mplhep as hep
+import matplotlib.gridspec as gridspec
 #plt.style.use([hep.style.LHCb2])
 import ROOT
 import json
@@ -490,27 +491,35 @@ class template:
 class fitter:
     def __init__(self,template_list,nul_params):
         self._template_list = template_list
-        self._data = np.array([])
+        self._data = np.zeros(self._template_list[0]._nobs)
         self._nul_params = nul_params
     
-    def nul_pdf(self):
-        def func():
-            res = np.zeros(self._template_list[0]._nobs)
-            for temp in self._template_list:
-                res += temp.generate_template(**self._nul_params)
-            return res
-        return func        
+    def chi_squared(self, **kwargs):
+        model = np.zeros(self._template_list[0]._nobs)
+        for template in self._template_list:
+            model += template.generate_template(**kwargs)
 
-    def alt_pdf(self):
-        def func(**kwargs):
-            res = np.zeros(self._template_list[0]._nobs)
-            for temp in self._template_list:
-                res += temp.generate_template(**kwargs)
-            return res
-        return func
+        chi2 = np.sum(((self._data - model) ** 2) / (model + 1e-8))
+        return chi2
     
+    def negative_log_likelihood(self,**kwargs):
+        model = np.zeros(self._template_list[0]._nobs)
+        for template in self._template_list:
+            model += template.generate_template(**kwargs)
+        epsilon = 1e-9
+        model = np.maximum(model, epsilon)
+        nll = np.sum(model - self._data * np.log(model + epsilon))
+        return nll    
+     
+        
     def upload_data(self,data):
         self._data = data
+
+    def upload_data_toy(self,**kwargs):
+        toy = np.zeros(self._template_list[0]._nobs)
+        for template in self._template_list:
+            toy += template.generate_toy(**kwargs)
+        self.upload_data(toy)
 
     def get_histos(self,input):
         v_out = []
