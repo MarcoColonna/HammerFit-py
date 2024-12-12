@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 #plt.style.use([hep.style.LHCb2])
 import ROOT
+import json
 
 
 import importlib.util
@@ -46,8 +47,6 @@ from hammer.hammerlib import (FourMomentum, Hammer, IOBuffer,
 
 #######
 
-import configparser
-import ast
 # the histo_info is a utility class mainly used for plotting
 class histo_info:
     def __init__(self, axis_titles, binning):
@@ -58,8 +57,6 @@ class histo_info:
 # it access it and it changes, if required, the FF and the WC d.o.f
 # giving access to the histogram as it changes wrt them
 class HammerCacher:
-    
-    
     def __init__(self, fileName, histoName, FFscheme, WilsonSet, FormFactors, WilsonCoefficients, scaleFactor, histo_infos, verbose=False):#, **kwargs):
         self._histoName = histoName 
         self._FFScheme = FFscheme
@@ -93,9 +90,9 @@ class HammerCacher:
                         if not buf.load(fin):
                             break
     
-        self._ham.set_ff_eigenvectors("BtoD*","BLPRXPVar",self._FFs)
+        self._ham.set_ff_eigenvectors(self._FFScheme["Process"],self._FFScheme["SchemeVar"],self._FFs)
         self._ham.set_wilson_coefficients(self._WilsonSet, self._wcs)
-        self._histo = self._ham.get_histogram(histoName, FFscheme)
+        self._histo = self._ham.get_histogram(histoName, FFscheme["name"])
         dims = self._ham.get_histogram_shape(histoName)
         dims = dims[1:] + dims[:1]
         dims.pop()
@@ -142,82 +139,84 @@ class HammerCacher:
     def getHistoElement(self ,indices, wcs, FFs):
         pos = calcPos(indices)
         if not self.checkFFCache(FFs):
-            self._ham.set_ff_eigenvectors("BtoD*", "BLPRXPVar", FFs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._ham.set_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"], FFs)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         if not self.checkWCCache(wcs):
             self._ham.reset_wilson_coefficients(self._WilsonSet)
             self._ham.set_wilson_coefficients(self._WilsonSet, wcs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         return self._histo[pos].sum_wi * scaleFactor
     
     def getHistoTotalSM(self):
         total = 0
-        wcs = {"SM" : 1.0}
-        self._ham.reset_wilson_coefficients(self._WilsonSet, wcs)
-        self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+        wcs = {}
+        for key, value in self._wcs.items():
+            if key == 'SM':
+                wcs[key] = 1.
+            else:
+                wcs[key] = 0.
+        self._ham.reset_wilson_coefficients(self._WilsonSet)
+        self._ham.set_wilson_coefficients(self._WilsonSet, wcs)
+        self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         for ni in range(self._nobs):
             total += self._histo[ni].sum_wi
         return total
     
     def getHistoTotal(self, wcs, FFs):
         total = 0
-        self._ham.set_ff_eigenvectors("BtoD*", "BLPRXPVar", FFs)
+        self._ham.set_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"], FFs)
         self.ham.reset_wilson_coefficients(self._WilsonSet, wcs)
-        self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+        self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         for ni in range(nobs):
             total += _histo[ni].sumWi
         return total
     
     def getHistoElementByPos(self, pos, wcs, FFs):
         if not self.checkFFCache(FFs):
-            self._ham.reset_ff_eigenvectors("BtoD*", "BLPRXPVar")
-            self._ham.set_ff_eigenvectors("BtoD*", "BLPRXPVar", FFs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._ham.reset_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"])
+            self._ham.set_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"], FFs)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         if not self.checkWCCache(wcs):
             self._ham.reset_wilson_coefficients(self._WilsonSet)
             self._ham.set_wilson_coefficients(self._WilsonSet, wcs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         return self._histo[pos].sum_wi * self._scaleFactor / self._normFactor
     
     def getHistoElementByPosNoScale(self, pos, wcs, FFs):
         if not self.checkFFCache(FFs):
-            self._ham.reset_ff_eigenvectors("BtoD*", "BLPRXPVar")
-            self._ham.set_ff_eigenvectors("BtoD*", "BLPRXPVar", FFs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._ham.reset_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"])
+            self._ham.set_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"], FFs)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         if not self.checkWCCache(wcs):
             self._ham.reset_wilson_coefficients(self._WilsonSet)
             self._ham.set_wilson_coefficients(self._WilsonSet, wcs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         return self._histo[pos].sum_wi
 
     def getHistoElementByPosSM(self, pos, wcs, FFs):
-        wcs["S_qLlL"] = 0.
-        wcs["S_qRlL"] = 0.
-        wcs["V_qLlL"] = 0. 
-        wcs["V_qRlL"] = 0. 
-        wcs["T_qLlL"] = 0.
+        for key in wcs.keys():
+            if key != 'SM':
+                wcs[key] = 0.
         if not self.checkFFCache(FFs):
-            self._ham.set_ff_eigenvectors("BtoD*", "BLPRXPVar", FFs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._ham.set_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"], FFs)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         if not self.checkWCCache(wcs):
             self._ham.reset_wilson_coefficients(self._WilsonSet)
             self._ham.set_wilson_coefficients(self._WilsonSet, wcs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         return self._histo[pos].sum_wi * self._scaleFactor / self._normFactor
 
     def getHistoElementByPosNoScaleSM(self, pos, wcs, FFs):
-        wcs["S_qLlL"] = 0.
-        wcs["S_qRlL"] = 0.
-        wcs["V_qLlL"] = 0. 
-        wcs["V_qRlL"] = 0. 
-        wcs["T_qLlL"] = 0.
+        for key in wcs.keys():
+            if key != 'SM':
+                wcs[key] = 0.
         if not self.checkFFCache(FFs):
-            self._ham.set_ff_eigenvectors("BtoD*", "BLPRXPVar", FFs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._ham.set_ff_eigenvectors(self._FFScheme["Process"], self._FFScheme["SchemeVar"], FFs)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         if not self.checkWCCache(wcs):
             self._ham.reset_wilson_coefficients(self._WilsonSet)
             self._ham.set_wilson_coefficients(self._WilsonSet, wcs)
-            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme)
+            self._histo = self._ham.get_histogram(self._histoName, self._FFScheme["name"])
         return self._histo[pos].sum_wi
 
 # Multi hammer cacher allows you to store multiple histograms in multiple files
@@ -247,11 +246,9 @@ class MultiHammerCacher:
     
     def getHistoElementByPosSM(self, pos, wcs, FFs):
         res = 0
-        wcs["S_qLlL"] = 0.
-        wcs["S_qRlL"] = 0.
-        wcs["V_qLlL"] = 0. 
-        wcs["V_qRlL"] = 0. 
-        wcs["T_qLlL"] = 0.
+        for key in wcs.keys():
+            if key != 'SM':
+                wcs[key] = 0.
         for i in range(len(self._cacherList)):
             res += self._cacherList[i].getHistoElementByPosNoScale(pos,wcs,FFs)
             self._wcs = wcs
@@ -261,10 +258,10 @@ class MultiHammerCacher:
 # the background cacher access not hammer reweighted histograms and gives us in a format
 # similar to the HammerCacher (easier to handle them together later)
 class BackgroundCacher:
-    def __init__(self, fileName, histoName):
+    def __init__(self, fileName, histoName, strides):
         self._fileName = fileName
         self._histoName = histoName
-        self._strides = [48,8,1]
+        self._strides = strides
 
         file = ROOT.TFile.Open(self._fileName, "READ")
         if not file or file.IsZombie():
@@ -312,7 +309,7 @@ class HammerNuisWrapper:
     
     def set_wcs(self,wcs):
         self._wcs = {"SM":wcs[list(wcs.keys())[0]],"S_qLlL": complex(wcs[list(wcs.keys())[1]], wcs[list(wcs.keys())[2]]),"S_qRlL": complex(wcs[list(wcs.keys())[3]], wcs[list(wcs.keys())[4]]),"V_qLlL": complex(wcs[list(wcs.keys())[5]], wcs[list(wcs.keys())[6]]),"V_qRlL": complex(wcs[list(wcs.keys())[7]], wcs[list(wcs.keys())[8]]),"T_qLlL": complex(wcs[list(wcs.keys())[9]], wcs[list(wcs.keys())[10]])}
-
+    
     def set_FFs(self,FFs):
         FFs_temp = {}
         for key, value in FFs.items():
@@ -356,6 +353,11 @@ class HammerNuisWrapperSM:
         self._histo_infos = hac._histo_infos
     
     def set_wcs(self,wcs):
+        #for key in self._wcs.keys():
+        #    if key == 'SM':
+        #        self._wcs[key] = wcs[key]
+        #    else:
+        #        self._wcs[key] = complex(wcs['Re_'+key],wcs['Im_'+key])
         self._wcs = {"SM":wcs[list(wcs.keys())[0]],"S_qLlL": complex(wcs[list(wcs.keys())[1]], wcs[list(wcs.keys())[2]]),"S_qRlL": complex(wcs[list(wcs.keys())[3]], wcs[list(wcs.keys())[4]]),"V_qLlL": complex(wcs[list(wcs.keys())[5]], wcs[list(wcs.keys())[6]]),"V_qRlL": complex(wcs[list(wcs.keys())[7]], wcs[list(wcs.keys())[8]]),"T_qLlL": complex(wcs[list(wcs.keys())[9]], wcs[list(wcs.keys())[10]])}
 
     def set_FFs(self,FFs):
@@ -418,7 +420,7 @@ class BackgroundNuisWrapper:
         for key, value in self._params.items():
             val = val*value
         return val
-
+    
 # the template class takes the wrapper and allows to generate templates, and toys
 # wrt any set of d.o.f we want
 class template:
@@ -426,7 +428,7 @@ class template:
         self._name = name
         self._wrap = wrap
         self._nobs = wrap._nobs
-        self._nwcs = 2*len(self._wrap._wcs)-1
+        self._nwcs = len(self._wrap._wcs)
         self._nFFs = len(self._wrap._FFs)
         self._nparams = len(self._wrap._params)
         self._strides = wrap._strides
@@ -438,13 +440,12 @@ class template:
         params = {}
 
         for i, (key, value) in enumerate(kwargs.items()):
-            if i < self._nwcs:
+            if i < self._nwcs*2-1:
                 wcs[key] = value
-            elif self._nwcs <= i < self._nwcs+self._nFFs:
+            elif self._nwcs*2-1 <= i < self._nwcs*2-1+self._nFFs:
                 FFs[key] = value
             else:
                 params[key] = value
-        
         self._wrap.set_wcs(wcs)
         self._wrap.set_FFs(FFs)
         self._wrap.set_params(params)
@@ -464,13 +465,12 @@ class template:
         params = {}
 
         for i, (key, value) in enumerate(kwargs.items()):
-            if i < self._nwcs:
+            if i < self._nwcs*2-1:
                 wcs[key] = value
-            elif self._nwcs <= i < self._nwcs+self._nFFs:
+            elif self._nwcs*2-1 <= i < self._nwcs*2-1+self._nFFs:
                 FFs[key] = value
             else:
                 params[key] = value
-        
         self._wrap.set_wcs(wcs)
         self._wrap.set_FFs(FFs)
         self._wrap.set_params(params)
@@ -482,33 +482,36 @@ class template:
             val=self._wrap.evaluate()
             bin_contents[i]+=np.random.poisson(val)
         
-        return bin_contents  
+        return bin_contents 
 
 # the fitter contains a template list and data (toys in the examples)
-# it contains the definition of functions like chi2 and nll to implement later
-# fits in iminuit and a small plotting setup
+# it contains the definition of a nul_pdf and an alternative_pdf to be injected in the definition of the modifier
+# a small plotting interface is implemented to retireve the projected histograms (from the strides) and overlay data
 class fitter:
-    def __init__(self,template_list,data):
+    def __init__(self,template_list,nul_params):
         self._template_list = template_list
-        self._data = data
+        self._data = np.array([])
+        self._nul_params = nul_params
     
-    def chi_squared(self, **kwargs):
-        model = np.zeros(self._template_list[0]._nobs)
-        for template in self._template_list:
-            model += template.generate_template(**kwargs)
+    def nul_pdf(self):
+        def func():
+            res = np.zeros(self._template_list[0]._nobs)
+            for temp in self._template_list:
+                res += temp.generate_template(**self._nul_params)
+            return res
+        return func        
 
-        chi2 = np.sum(((self._data - model) ** 2) / (model + 1e-8))
-        return chi2
+    def alt_pdf(self):
+        def func(**kwargs):
+            res = np.zeros(self._template_list[0]._nobs)
+            for temp in self._template_list:
+                res += temp.generate_template(**kwargs)
+            return res
+        return func
     
-    def negative_log_likelihood(self,**kwargs):
-        model = np.zeros(self._template_list[0]._nobs)
-        for template in self._template_list:
-            model += template.generate_template(**kwargs)
-        epsilon = 1e-9
-        model = np.maximum(model, epsilon)
-        nll = np.sum(model - self._data * np.log(model + epsilon))
-        return nll
-    
+    def upload_data(self,data):
+        self._data = data
+
     def get_histos(self,input):
         v_out = []
         nobs = self._template_list[0]._nobs
@@ -537,7 +540,7 @@ class fitter:
 
         return v_out
 
-    def plot(self,**kwargs):
+    def plot(self, **kwargs):
         strides = self._template_list[0]._strides
         n_histos = len(strides)
         axis_titles = self._template_list[0]._histo_infos._axis_titles
@@ -548,55 +551,72 @@ class fitter:
             contributions.append(self.get_histos(self._template_list[k].generate_template(**kwargs)))
         n_histos = len(contributions[0])
         n_contributions = len(contributions)
-        
-        fig, axs = plt.subplots(n_histos, 1, figsize=(6, 4 * n_histos))
-        
-        if n_histos == 1:
-            axs = [axs]
-        
-        colors = plt.cm.viridis(np.linspace(0, 1, n_contributions)) 
 
-        for i in range(n_histos): 
+        colors = plt.cm.viridis(np.linspace(0, 1, n_contributions))
+
+        fig = plt.figure(figsize=(8, 6 * n_histos))
+        gs = gridspec.GridSpec(n_histos * 2, 1, height_ratios=[4, 1] * n_histos) 
+
+        axs = []
+        for i in range(n_histos):
+            ax_main = fig.add_subplot(gs[i * 2])
+            ax_ratio = fig.add_subplot(gs[i * 2 + 1], sharex=ax_main)
+            axs.append((ax_main, ax_ratio))
+
+        for i in range(n_histos):
             total_contribution = np.zeros(len(contributions[0][i]))
-            
-            for j in range(n_contributions): 
-                bin_content = contributions[j][i] 
+            for j in range(n_contributions):
+                bin_content = contributions[j][i]
                 n_bins = len(bin_content)
                 bin_edges = np.linspace(binning[i][0], binning[i][1], n_bins + 1)
 
+                # Main plot
                 if j == 0:
-                    axs[i].errorbar(
-                        bin_edges[:-1] + np.diff(bin_edges) / 2,  
-                        bin_content,                              
-                        yerr=np.sqrt(bin_content),                
-                        fmt='o',                                 
-                        alpha=1.,                                
+                    axs[i][0].errorbar(
+                        bin_edges[:-1] + np.diff(bin_edges) / 2,
+                        bin_content,                           
+                        yerr=np.sqrt(bin_content),              
+                        fmt='+',                                 
+                        alpha=1.,                                 
                         label='Data'                             
                     )
                 else:
-                    axs[i].bar(
-                        bin_edges[:-1], bin_content, width=np.diff(bin_edges), 
+                    axs[i][0].bar(
+                        bin_edges[:-1], bin_content, width=np.diff(bin_edges),
                         align='edge', alpha=0.5, color=colors[j], label=self._template_list[j-1]._name
                     )
-                    total_contribution += bin_content  
+                    total_contribution += bin_content
 
-            axs[i].step(
-                bin_edges, np.append(total_contribution, total_contribution[-1]),  
+            axs[i][0].step(
+                bin_edges, np.append(total_contribution, total_contribution[-1]),
                 where='post', color='black', linestyle='--', linewidth=1.5, label='Total'
             )
 
-           
-            axs[i].set_xlim(binning[i][0], binning[i][1])
-            axs[i].set_title('')
-            axs[i].set_xlabel(axis_titles[i])
-            axs[i].set_ylabel('Bin Content')
-            axs[i].legend(loc='best')  
+            ratio = contributions[0][i] / total_contribution
+            ratio_err = np.sqrt(contributions[0][i]) / total_contribution
+            axs[i][1].errorbar(
+                bin_edges[:-1] + np.diff(bin_edges) / 2, ratio, yerr=ratio_err,
+                fmt='+', alpha=1., label='Data'
+            )
+            axs[i][1].axhline(1, color='red', linestyle='--', linewidth=1)
 
+            axs[i][0].set_xlim(binning[i][0], binning[i][1])
+            axs[i][0].set_title('')
+            axs[i][0].set_xlabel(axis_titles[i])
+            axs[i][0].set_ylabel('Bin Content')
+            axs[i][0].legend(loc='best')
 
-        plt.tight_layout()
+            # Formatting ratio plot
+            axs[i][1].set_xlim(binning[i][0], binning[i][1])
+            axs[i][1].set_ylim(0.8, 1.2)
+            axs[i][1].set_xlabel('')
+            axs[i][1].set_ylabel('Data/Model')
+            axs[i][1].tick_params(axis='y', which='both', right=False)
+
+            plt.setp(axs[i][0].get_xticklabels(), visible=False)
+
+        plt.tight_layout(h_pad=0.5)
         plt.show()
-        
-
 
 # The reader class aim is to make everything above not necessary to be fully undestood
 # A config file is provided and the reader produces itself the necessary objects:
@@ -605,54 +625,69 @@ class fitter:
 class Reader:
     def __init__(self, filename):
         self.name = filename
-        self.config = configparser.ConfigParser()
-        self.config.read(filename)
+        with open(filename, 'r') as f:
+            self.config = json.load(f)
         
-    def createFitter(self,verbose=False):
+    def createFitter(self, verbose=False):
         template_list = []
-        toy_list = []
-        for mode in self.config.sections():
+        nul_params = {}
+
+        for mode, mode_config in self.config.items():
             hac_list = []
-            if(verbose):
+            if verbose:
                 print(f"Reading the mode: {mode}")
-            fileNames = ast.literal_eval(self.config[mode]["fileNames"])
-            histoname = self.config.get(mode,"histoname")
-            ffscheme = self.config.get(mode,"ffscheme")
-            wcscheme = self.config.get(mode,"wcscheme")
-            formfactors = ast.literal_eval(self.config[mode]["formfactors"])
-            wilsoncoefficients = ast.literal_eval(self.config[mode]["wilsoncoefficients"])
-            scalefactor = ast.literal_eval(self.config[mode]["scalefactor"])
-            nuisance = ast.literal_eval(self.config[mode]["nuisance"])
-            is_hammer_weighted = ast.literal_eval(self.config[mode]["ishammerweighted"])
-            histo_infos = histo_info(ast.literal_eval(self.config[mode]["axistitles"]), ast.literal_eval(self.config[mode]["binning"]))
+            fileNames = mode_config["fileNames"]
+            histoname = mode_config["histoname"]
+            ffscheme = mode_config["ffscheme"]
+            wcscheme = mode_config["wcscheme"]
+            formfactors = mode_config["formfactors"]
+            wilsoncoefficients = mode_config["wilsoncoefficients"]
+            scalefactor = mode_config["scalefactor"]
+            nuisance = mode_config["nuisance"]
+            is_hammer_weighted = mode_config["ishammerweighted"]
+            injectNP = mode_config["injectNP"]
+            histo_infos = histo_info(mode_config["axistitles"], mode_config["binning"])
+            _wilsoncoefficients = {}
+            for key, value in wilsoncoefficients.items():
+                if key == 'SM':
+                    if key not in nul_params:
+                        nul_params[key] = value[0]
+                else:
+                    if 'Re_'+key not in nul_params:
+                        nul_params['Re_'+key] = value[0]
+                        nul_params['Im_'+key] = value[1]
+            for key, value in wilsoncoefficients.items():
+                _wilsoncoefficients[key] = complex(value[0],value[1])
             if is_hammer_weighted:
                 for fileName in fileNames:
-                    hac_list.append(HammerCacher(fileName, histoname, ffscheme, wcscheme, formfactors, wilsoncoefficients, scalefactor, histo_infos))
+                    hac_list.append(HammerCacher(fileName, histoname, ffscheme, wcscheme, formfactors, _wilsoncoefficients, scalefactor, histo_infos))
                 cacher = MultiHammerCacher(hac_list)
-                if wcscheme == "BtoCTauNu":
+                if injectNP:
                     wrapper = HammerNuisWrapper(cacher, **nuisance)
-                    temp = template(mode,wrapper)
+                    temp = template(mode, wrapper)
                     template_list.append(temp)
-                    toy_parameters = wilsoncoefficients | formfactors | nuisance
-                    toy_list.append(temp.generate_toy(**toy_parameters))
+                    parameters = formfactors | nuisance
+                    for key, value in parameters.items():
+                        if key not in nul_params:
+                            nul_params[key] = value
                 else:
                     wrapper = HammerNuisWrapperSM(cacher, **nuisance)
-                    temp = template(mode,wrapper)
+                    temp = template(mode, wrapper)
                     template_list.append(temp)
-                    toy_parameters = wilsoncoefficients | formfactors | nuisance
-                    toy_list.append(temp.generate_toy(**toy_parameters))
+                    for key, value in parameters.items():
+                        if key not in nul_params:
+                            nul_params[key] = value
             else:
                 for fileName in fileNames:
                     hac_list.append(BackgroundCacher(fileName, histoname))
                 cacher = hac_list[0]
-                wrapper = BackgroundNuisWrapper(cacher,**nuisance)
-                temp = template(mode,wrapper)
+                wrapper = BackgroundNuisWrapper(cacher, **nuisance)
+                temp = template(mode, wrapper)
                 template_list.append(temp)
-                toy_parameters = nuisance
-                toy_list.append(temp.generate_toy(**toy_parameters))
+                parameters = nuisance
+                for key, value in parameters.items():
+                    if key not in nul_params:
+                        nul_params[key] = value
 
+        return fitter(template_list, nul_params)
 
-        toy_tot = np.zeros(len(toy_list[0]))
-        for toy in toy_list:
-            toy_tot+=toy
-        return fitter(template_list,toy_tot)
