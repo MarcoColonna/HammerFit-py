@@ -259,10 +259,11 @@ class MultiHammerCacher:
 # the background cacher access not hammer reweighted histograms and gives us in a format
 # similar to the HammerCacher (easier to handle them together later)
 class BackgroundCacher:
-    def __init__(self, fileName, histoName, strides):
+    def __init__(self, fileName, histoName, strides,histo_infos):
         self._fileName = fileName
         self._histoName = histoName
         self._strides = strides
+        self._histo_infos = histo_infos
 
         file = ROOT.TFile.Open(self._fileName, "READ")
         if not file or file.IsZombie():
@@ -398,6 +399,7 @@ class BackgroundNuisWrapper:
         self._nbin = 0
         self._strides = bkg._strides
         self._dim = len(bkg._strides)
+        self._histo_infos = bkg._histo_infos
 
 
     def set_nbin(self,nbin):
@@ -591,8 +593,14 @@ class fitter:
                     )
                 else:
                     axs[i][0].bar(
-                        bin_edges[:-1], bin_content, width=np.diff(bin_edges),
-                        align='edge', alpha=0.5, color=colors[j], label=self._template_list[j-1]._name
+                        bin_edges[:-1],  # Start position of each bar
+                        bin_content,  # Height of the current contribution
+                        width=np.diff(bin_edges),  # Width of the bins
+                        align='edge', 
+                        alpha=0.5, 
+                        color=colors[j], 
+                        bottom=total_contribution,  # Start height for stacking
+                        label=self._template_list[j-1]._name
                     )
                     total_contribution += bin_content
 
@@ -688,7 +696,7 @@ class Reader:
                             nul_params[key] = value
             else:
                 for fileName in fileNames:
-                    hac_list.append(BackgroundCacher(fileName, histoname))
+                    hac_list.append(BackgroundCacher(fileName, histoname,[24,4,1],histo_info))
                 cacher = hac_list[0]
                 wrapper = BackgroundNuisWrapper(cacher, **nuisance)
                 temp = template(mode, wrapper)
