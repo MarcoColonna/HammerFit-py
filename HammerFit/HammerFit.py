@@ -648,7 +648,7 @@ class Reader:
     def createFitter(self, verbose=False):
         template_list = []
         nul_params = {}
-
+        stride_from_ham = []
         for mode, mode_config in self.config.items():
             hac_list = []
             if verbose:
@@ -679,6 +679,7 @@ class Reader:
                 for fileName in fileNames:
                     hac_list.append(HammerCacher(fileName, histoname, ffscheme, wcscheme, formfactors, _wilsoncoefficients, scalefactor, histo_infos))
                 cacher = MultiHammerCacher(hac_list)
+                stride_from_ham = cacher._strides
                 if injectNP:
                     wrapper = HammerNuisWrapper(cacher, **nuisance)
                     temp = template(mode, wrapper)
@@ -696,7 +697,12 @@ class Reader:
                             nul_params[key] = value
             else:
                 for fileName in fileNames:
-                    hac_list.append(BackgroundCacher(fileName, histoname,[24,4,1],histo_info))
+                    if not stride_from_ham:  # This checks if stride_from_ham is empty, None, or evaluates to False
+                        print("Error: no Hammer Histogram found in the json!")
+                        exit()  # Terminates the program
+                    else:
+                        # Proceed to append to the list if stride_from_ham is not empty
+                        hac_list.append(BackgroundCacher(fileName, histoname, stride_from_ham, histo_info))
                 cacher = hac_list[0]
                 wrapper = BackgroundNuisWrapper(cacher, **nuisance)
                 temp = template(mode, wrapper)
