@@ -16,4 +16,10 @@ The model's definition is contained in a JSON file, where the paths to the files
 To install **HammerFit-py** locally, run the following command:
 
 ```bash
-git clone https://github.com/MarcoColonna/HammerFit-py.git && cd HammerFit-py && git checkout v0.0.1 && pip install .
+git clone https://github.com/MarcoColonna/HammerFit-py.git
+
+cd HammerFit-py
+
+git checkout v0.0.1
+
+pip install .
