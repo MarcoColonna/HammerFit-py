@@ -1,17 +1,19 @@
-Version 0.0.1
+# HammerFit-py
 
-HammerFit-py is a python interface to access and read Hammer reweighted histograms and include the Hammer's degrees of freedom (Wilson Coefficients and Form Factor parameters) in the pythonic fitting interfaces (i.e. iMinuit) for Semileptonic studies.
+**Version 0.0.1**
 
-The definition of the model is all contained in a json file where the paths to the files containing the histograms (.dat files for Hammer-reweighted histograms, .root files for non-Hammer-reweighted histograms) are defined together with all the properties the module requires to perform fits and plot.
+HammerFit-py is a Python interface designed for accessing and reading Hammer reweighted histograms. It integrates Hammer's degrees of freedom (Wilson Coefficients and Form Factor parameters) into Pythonic fitting frameworks, such as iMinuit, specifically for semileptonic studies.
 
-In the next future the module will be fully documented.
+The model's definition is contained in a JSON file, where the paths to the files containing the histograms (e.g., `.dat` files for Hammer-reweighted histograms and `.root` files for non-Hammer-reweighted histograms) are defined. The JSON file also includes all necessary properties to perform fits and generate plots.
 
-TO INSTALL LOCALLY HammerFit.py do:
+### Features:
+- Access and read Hammer reweighted histograms.
+- Integrate Hammer's Wilson Coefficients and Form Factor parameters into Pythonic fitting interfaces.
+- Designed for semileptonic studies, enabling easy fits and visualizations.
 
-git clone https://github.com/MarcoColonna/HammerFit-py.git
+### Installation
 
-cd HammerFit-py
+To install **HammerFit-py** locally, run the following command:
 
-git checkout v0.0.1
-
-pip install .
+```bash
+git clone https://github.com/MarcoColonna/HammerFit-py.git && cd HammerFit-py && git checkout v0.0.1 && pip install .
