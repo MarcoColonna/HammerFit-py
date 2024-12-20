@@ -9,6 +9,9 @@ In the next future the module will be fully documented.
 TO INSTALL LOCALLY HammerFit.py do:
 
 git clone https://github.com/MarcoColonna/HammerFit-py.git
+
 cd HammerFit-py
+
 git checkout v0.0.1
+
 pip install .
