@@ -12,22 +12,6 @@ The model's definition is contained in a JSON file, where the paths to the files
 - Designed for semileptonic studies, enabling easy fits and visualizations.
 
 ### Installation
-<<<<<<< HEAD
-=======
 
-To install **HammerFit-py** locally, run the following command:
-
-```bash
-git clone https://github.com/MarcoColonna/HammerFit-py.git
->>>>>>> 73287ac3e02cf89885180e717a9c634967605270
-
-To install **HammerFit-py** locally, run the following command:
-
-<<<<<<< HEAD
 ```bash
 git clone https://github.com/MarcoColonna/HammerFit-py.git && cd HammerFit-py && git checkout v0.0.1 && pip install .
-=======
-git checkout v0.0.1
-
-pip install .
->>>>>>> 73287ac3e02cf89885180e717a9c634967605270
